@@ -1,0 +1,49 @@
+version: '3'
+services:
+  web:
+    image: tomcat:9.0
+    volumes:
+      - ./webapp.war:/usr/local/tomcat/webapps/webapp.war
+    depends_on:
+      - db
+  
+  nginx:
+    build: ./nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - node-service
+    env_file:
+      - variables.env
+
+  node-service:
+    build: ./api
+    environment:
+      DB_HOST: db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+    depends_on:
+      - db
+    expose:
+      - "3000"
+    env_file:
+      - variables.env
+    deploy:
+      replicas: 3  # Scale this service to 3 instances
+
+  db:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    build: ./db
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    env_file:
+      - variables.env
